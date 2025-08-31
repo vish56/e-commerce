@@ -1,0 +1,30 @@
+# ---- Universal ----
+.DS_Store
+Thumbs.db
+.vscode/
+*.env
+.env
+*.log
+
+# ---- Node/React ----
+node_modules/
+build/
+dist/
+coverage/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---- Python/Django ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+env/
+venv/
+.venv/
+local_settings.py
+media/
+staticfiles/
