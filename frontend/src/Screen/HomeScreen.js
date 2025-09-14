@@ -13,8 +13,7 @@ const HomeScreen = () => {
     dispatch(listProducts())
   }, [dispatch])
 
-  console.log("products =", products);
-
+  console.log("products =", products)
 
   return (
     <div className="container">
@@ -26,11 +25,18 @@ const HomeScreen = () => {
         <h3>{error}</h3>
       ) : (
         <div className="row">
-          {products?.map((product) => (
-            <div key={product.id} className="col-sm-12 col-md-6 col-lg-4 col-xl-3 mb-4">
-              <Product product={product} />
-            </div>
-          ))}
+          {Array.isArray(products) && products.length > 0 ? (
+            products.map((product) => (
+              <div
+                key={product.id}
+                className="col-sm-12 col-md-6 col-lg-4 col-xl-3 mb-4"
+              >
+                <Product product={product} />
+              </div>
+            ))
+          ) : (
+            <h2>No Products Found</h2>
+          )}
         </div>
       )}
     </div>

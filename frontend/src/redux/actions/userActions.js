@@ -20,9 +20,10 @@ export const login = (email, password) => async (dispatch) => {
       },
     }
 
+    // send 'email' (normalized) — backend expects email key
     const { data } = await axios.post(
       '/api/users/login/',
-      { username: email, password },
+      { email: email.trim().toLowerCase(), password },
       config
     )
 
@@ -58,7 +59,7 @@ export const register = (name, email, password) => async (dispatch) => {
 
     const { data } = await axios.post(
       '/api/users/register/',
-      { name, email, password },
+      { name, email: email.trim().toLowerCase(), password },
       config
     )
 

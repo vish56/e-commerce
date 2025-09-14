@@ -11,11 +11,12 @@ const PlaceOrderScreen = () => {
   const navigate = useNavigate()
 
   const cart = useSelector((state) => state.cart)
+  const { cartItems = [], shippingAddress = {}, paymentMethod } = cart
 
   // Calculate prices
   const addDecimals = (num) => (Math.round(num * 100) / 100).toFixed(2)
   cart.itemsPrice = addDecimals(
-    cart.cartItems.reduce((acc, item) => acc + item.price * item.qty, 0)
+    cartItems.reduce((acc, item) => acc + Number(item.price) * Number(item.qty), 0)
   )
   cart.shippingPrice = addDecimals(cart.itemsPrice > 100 ? 0 : 10)
   cart.taxPrice = addDecimals(Number((0.15 * cart.itemsPrice).toFixed(2)))
@@ -28,24 +29,48 @@ const PlaceOrderScreen = () => {
   const orderCreate = useSelector((state) => state.orderCreate)
   const { order, success, error } = orderCreate
 
+  const userLogin = useSelector((state) => state.userLogin)
+  const { userInfo } = userLogin || {}
+
   useEffect(() => {
-    if (success) {
-      navigate(`/order/${order._id}`)
+    if (success && order) {
+      // navigate to order details (Django returns id)
+      navigate(`/order/${order.id}`)
     }
   }, [success, navigate, order])
 
-  const placeOrderHandler = () => {
-    dispatch(
-      createOrder({
-        orderItems: cart.cartItems,
-        shippingAddress: cart.shippingAddress,
-        paymentMethod: cart.paymentMethod,
-        itemsPrice: cart.itemsPrice,
-        shippingPrice: cart.shippingPrice,
-        taxPrice: cart.taxPrice,
-        totalPrice: cart.totalPrice,
-      })
-    )
+  // Build a normalized payload that backend expects
+  const buildOrderPayload = () => {
+    const items = cartItems.map((it) => {
+      const productId = it.product || it.productId || it._id || it.id
+      return {
+        product: Number(productId), // backend expects 'product'
+        qty: Number(it.qty || it.quantity || 1),
+        price: Number(it.price || 0),
+      }
+    })
+
+    return {
+      orderItems: items,
+      shippingAddress: shippingAddress || {},
+      paymentMethod: paymentMethod || 'COD',
+      itemsPrice: cart.itemsPrice,
+      shippingPrice: cart.shippingPrice,
+      taxPrice: cart.taxPrice,
+      totalPrice: cart.totalPrice,
+    }
+  }
+
+  const placeOrderHandler = (e) => {
+    // prevent default form submit / page reload
+    if (e && typeof e.preventDefault === 'function') e.preventDefault()
+
+    const payload = buildOrderPayload()
+    console.log('DEBUG payload for order:', payload) // remove when stable
+    dispatch(createOrder(payload))
+    console.log('HANDLER RUNNING', { cartItemsLength: cartItems.length, userInfo });
+alert('handler ran')
+
   }
 
   return (
@@ -57,31 +82,31 @@ const PlaceOrderScreen = () => {
               <h2>Shipping</h2>
               <p>
                 <strong>Address: </strong>
-                {cart.shippingAddress.address}, {cart.shippingAddress.city},{' '}
-                {cart.shippingAddress.postalCode}, {cart.shippingAddress.country}
+                {shippingAddress.address}, {shippingAddress.city},{' '}
+                {shippingAddress.postalCode}, {shippingAddress.country}
               </p>
             </ListGroup.Item>
 
             <ListGroup.Item>
               <h2>Payment Method</h2>
               <strong>Method: </strong>
-              {cart.paymentMethod}
+              {paymentMethod}
             </ListGroup.Item>
 
             <ListGroup.Item>
               <h2>Order Items</h2>
-              {cart.cartItems.length === 0 ? (
+              {cartItems.length === 0 ? (
                 <Message>Your cart is empty</Message>
               ) : (
                 <ListGroup variant="flush">
-                  {cart.cartItems.map((item, index) => (
-                    <ListGroup.Item key={index}>
+                  {cartItems.map((item) => (
+                    <ListGroup.Item key={item.product || item._id || item.id}>
                       <Row>
                         <Col md={1}>
                           <Image src={item.image} alt={item.name} fluid rounded />
                         </Col>
                         <Col>
-                          <Link to={`/product/${item.product}`}>{item.name}</Link>
+                          <Link to={`/product/${item.product || item._id || item.id}`}>{item.name}</Link>
                         </Col>
                         <Col md={4}>
                           {item.qty} x ₹{item.price} = ₹{(item.qty * item.price).toFixed(2)}
@@ -139,11 +164,12 @@ const PlaceOrderScreen = () => {
               <ListGroup.Item>
                 <Button
                   type="button"
+                  variant="primary"
                   className="btn-block"
-                  disabled={cart.cartItems === 0}
+                  disabled={cartItems.length === 0 || !userInfo}
                   onClick={placeOrderHandler}
                 >
-                  Place Order
+                  {userInfo ? 'Place Order' : 'Login to Place Order'}
                 </Button>
               </ListGroup.Item>
             </ListGroup>
