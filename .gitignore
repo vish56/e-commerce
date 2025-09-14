@@ -28,3 +28,31 @@ venv/
 local_settings.py
 media/
 staticfiles/
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# SQLite database
+db.sqlite3
+
+# Django migrations (except __init__.py)
+*/migrations/
+!*/migrations/__init__.py
+
+# VS Code settings
+.vscode/
+
+# Node modules (React frontend)
+node_modules/
+
+# Build files (React)
+build/
+dist/
+
+# Environment variables / virtualenv
+.env
+venv/
+env/
+

@@ -1,4 +1,3 @@
-// src/redux/store.js
 import { createStore, combineReducers, applyMiddleware } from 'redux'
 import thunk from 'redux-thunk'
 import { composeWithDevTools } from 'redux-devtools-extension'
@@ -13,7 +12,7 @@ import {
 } from './reducers/userReducers'
 import { orderCreateReducer, orderDetailsReducer, orderListReducer } from './reducers/orderReducers'
 
-// ✅ Combine all reducers
+// Combine all reducers and ensure the key is `cart` so components using state.cart work
 const reducer = combineReducers({
   productList: productListReducer,
   productDetails: productDetailsReducer,
@@ -26,7 +25,7 @@ const reducer = combineReducers({
   orderList: orderListReducer,
 })
 
-// ✅ Load initial state from localStorage
+// Load initial state from localStorage (keys must match what actions persist)
 const cartItemsFromStorage = localStorage.getItem('cartItems')
   ? JSON.parse(localStorage.getItem('cartItems'))
   : []
@@ -35,9 +34,14 @@ const shippingAddressFromStorage = localStorage.getItem('shippingAddress')
   ? JSON.parse(localStorage.getItem('shippingAddress'))
   : {}
 
-const paymentMethodFromStorage = localStorage.getItem('paymentMethod')
-  ? localStorage.getItem('paymentMethod')
-  : ''
+const paymentMethodFromStorage = (() => {
+  try {
+    const raw = localStorage.getItem('paymentMethod')
+    return raw ? JSON.parse(raw) : ''
+  } catch (e) {
+    return ''
+  }
+})()
 
 const userInfoFromStorage = localStorage.getItem('userInfo')
   ? JSON.parse(localStorage.getItem('userInfo'))
@@ -52,10 +56,8 @@ const initialState = {
   userLogin: { userInfo: userInfoFromStorage },
 }
 
-// ✅ Middleware
 const middleware = [thunk]
 
-// ✅ Create store
 const store = createStore(
   reducer,
   initialState,

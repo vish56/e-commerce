@@ -6,14 +6,43 @@ import {
   CART_CLEAR_ITEMS,
 } from '../constants/cartConstants'
 
-export const cartReducer = (
-  state = { cartItems: [], shippingAddress: {}, paymentMethod: '' },
-  action
-) => {
+// initialize state from localStorage if present (keeps shape consistent)
+const cartItemsFromStorage = (() => {
+  try {
+    return JSON.parse(localStorage.getItem('cartItems') || '[]')
+  } catch (e) {
+    return []
+  }
+})()
+
+const shippingAddressFromStorage = (() => {
+  try {
+    return JSON.parse(localStorage.getItem('shippingAddress') || '{}')
+  } catch (e) {
+    return {}
+  }
+})()
+
+const paymentMethodFromStorage = (() => {
+  try {
+    // we store paymentMethod as JSON.stringify(value) in actions
+    const raw = localStorage.getItem('paymentMethod')
+    return raw ? JSON.parse(raw) : ''
+  } catch (e) {
+    return ''
+  }
+})()
+
+const initialState = {
+  cartItems: cartItemsFromStorage,
+  shippingAddress: shippingAddressFromStorage,
+  paymentMethod: paymentMethodFromStorage,
+}
+
+export const cartReducer = (state = initialState, action) => {
   switch (action.type) {
     case CART_ADD_ITEM:
       const item = action.payload
-
       const existItem = state.cartItems.find((x) => x.product === item.product)
 
       if (existItem) {
