@@ -8,7 +8,7 @@ from rest_framework import status
 
 
 # -------------------------------
-# Login
+# Logingi
 # -------------------------------
 @api_view(['POST'])
 def login_view(request):
