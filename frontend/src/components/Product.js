@@ -10,31 +10,41 @@ const Product = ({ product }) => {
   const navigate = useNavigate()
 
   const addToCartHandler = () => {
-    dispatch(addToCart(product.id, 1)) // qty = 1
+    dispatch(addToCart(product.id, 1))
     navigate('/cart')
   }
 
   return (
-    <Card className='my-3 p-3 rounded'>
+    <Card className="my-3 p-3 rounded">
       <Link to={`/product/${product.id}`}>
-        <Card.Img src={product.image} variant='top' />
+        <Card.Img
+          variant="top"
+          src={`https://e-commerce-2-wajc.onrender.com${product.image}`}
+          onError={(e) => {
+            e.target.onerror = null
+            e.target.src = 'https://via.placeholder.com/300x300?text=No+Image'
+          }}
+        />
       </Link>
 
       <Card.Body>
         <Link to={`/product/${product.id}`}>
-          <Card.Title as='div'>
+          <Card.Title as="div">
             <strong>{product.name}</strong>
           </Card.Title>
         </Link>
 
-        <Card.Text as='div'>
-          <Rating value={product.rating} text={`${product.numReviews} reviews`} />
+        <Card.Text as="div">
+          <Rating
+            value={Number(product.rating)}
+            text={`${product.numReviews} reviews`}
+          />
         </Card.Text>
 
-        <Card.Text as='h3'>₹{product.price}</Card.Text>
+        <Card.Text as="h3">₹{product.price}</Card.Text>
 
         <button
-          className='btn btn-primary btn-sm mt-2'
+          className="btn btn-primary btn-sm mt-2"
           onClick={addToCartHandler}
         >
           Add to Cart

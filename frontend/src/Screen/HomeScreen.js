@@ -7,13 +7,11 @@ const HomeScreen = () => {
   const dispatch = useDispatch()
 
   const productList = useSelector((state) => state.productList)
-  const { loading, error, products } = productList || {}
+  const { loading, error, products = [] } = productList
 
   useEffect(() => {
     dispatch(listProducts())
   }, [dispatch])
-
-  console.log("products =", products)
 
   return (
     <div className="container">
@@ -25,7 +23,9 @@ const HomeScreen = () => {
         <h3>{error}</h3>
       ) : (
         <div className="row">
-          {Array.isArray(products) && products.length > 0 ? (
+          {products.length === 0 ? (
+            <h2>No Products Found</h2>
+          ) : (
             products.map((product) => (
               <div
                 key={product.id}
@@ -34,8 +34,6 @@ const HomeScreen = () => {
                 <Product product={product} />
               </div>
             ))
-          ) : (
-            <h2>No Products Found</h2>
           )}
         </div>
       )}

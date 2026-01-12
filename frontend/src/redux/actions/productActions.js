@@ -1,5 +1,4 @@
-// frontend/src/redux/actions/productActions.js
-import API from '../../axios' // use the axios instance you created
+import API from '../../axios'
 import {
   PRODUCT_LIST_REQUEST,
   PRODUCT_LIST_SUCCESS,
@@ -9,20 +8,26 @@ import {
   PRODUCT_DETAILS_FAIL,
 } from '../constants/productConstants'
 
-// List all products
-export const listProducts = () => async (dispatch) => {
+// ==============================
+// LIST PRODUCTS (PAGINATED)
+// ==============================
+export const listProducts = (keyword = '', pageNumber = '') => async (dispatch) => {
   try {
     dispatch({ type: PRODUCT_LIST_REQUEST })
 
-    // use relative path because API.baseURL already includes /api/
-    const { data } = await API.get('products/')
+    // API.baseURL already has /api/
+    // Backend supports pagination & search
+    const { data } = await API.get(
+      `products/?keyword=${keyword}&page=${pageNumber}`
+    )
 
-    // adjust based on your backend response:
-    // if backend returns { products: [...] } keep data.products
-    // if backend returns the array directly, use data
     dispatch({
       type: PRODUCT_LIST_SUCCESS,
-      payload: data.products ? data.products : data,
+      payload: {
+        products: data.products,
+        page: data.page,
+        pages: data.pages,
+      },
     })
   } catch (error) {
     dispatch({
@@ -35,12 +40,13 @@ export const listProducts = () => async (dispatch) => {
   }
 }
 
-// Product details
+// ==============================
+// PRODUCT DETAILS
+// ==============================
 export const listProductDetails = (id) => async (dispatch) => {
   try {
     dispatch({ type: PRODUCT_DETAILS_REQUEST })
 
-    // again use relative path
     const { data } = await API.get(`products/${id}/`)
 
     dispatch({

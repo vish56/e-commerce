@@ -26,7 +26,7 @@ env/
 venv/
 .venv/
 local_settings.py
-media/
+#media/
 staticfiles/
 # Python cache
 __pycache__/
