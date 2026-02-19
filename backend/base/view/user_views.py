@@ -1,56 +1,81 @@
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
+from django.shortcuts import get_object_or_404
+from django.db import transaction
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate
 from rest_framework import status
 
 
-# -------------------------------
-# Logingi
-# -------------------------------
+# ================================
+# LOGIN
+# ================================
 @api_view(['POST'])
 def login_view(request):
-    data = request.data
-    email = data.get('email')
-    password = data.get('password')
+    email = request.data.get('email', '').lower().strip()
+    password = request.data.get('password', '')
 
-    try:
-        user_obj = User.objects.get(email=email)
-    except User.DoesNotExist:
-        return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    if not email or not password:
+        return Response(
+            {'detail': 'Email and password required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-    user = authenticate(username=user_obj.username, password=password)
+    user = authenticate(username=email, password=password)
 
-    if user is not None:
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'name': user.first_name,
-            'email': user.email,
-            'isAdmin': user.is_staff,
-            'id': user.id,
-        })
-    else:
-        return Response({'detail': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+    if user is None:
+        return Response(
+            {'detail': 'Invalid credentials'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    refresh = RefreshToken.for_user(user)
+
+    return Response({
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+        'name': user.first_name,
+        'email': user.email,
+        'isAdmin': user.is_staff,
+        'id': user.id,
+    })
 
 
-# -------------------------------
-# Register
-# -------------------------------
+# ================================
+# REGISTER
+# ================================
 @api_view(['POST'])
 def registerUser(request):
-    data = request.data
-    try:
-        user = User.objects.create_user(
-            first_name=data['name'],
-            username=data['email'],
-            email=data['email'],
-            password=data['password']
+    name = request.data.get('name', '').strip()
+    email = request.data.get('email', '').lower().strip()
+    password = request.data.get('password', '')
+
+    if not name or not email or not password:
+        return Response(
+            {'detail': 'All fields are required'},
+            status=status.HTTP_400_BAD_REQUEST
         )
+
+    if User.objects.filter(email=email).exists():
+        return Response(
+            {'detail': 'User with this email already exists'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        with transaction.atomic():
+            user = User.objects.create_user(
+                first_name=name,
+                username=email,
+                email=email,
+                password=password
+            )
+
         refresh = RefreshToken.for_user(user)
+
         return Response({
             'refresh': str(refresh),
             'access': str(refresh.access_token),
@@ -59,17 +84,22 @@ def registerUser(request):
             'isAdmin': user.is_staff,
             'id': user.id,
         })
-    except Exception as e:
-        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception:
+        return Response(
+            {'detail': 'Registration failed'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
-# -------------------------------
-# Get user profile (logged-in user)
-# -------------------------------
+# ================================
+# GET PROFILE (Logged In User)
+# ================================
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def getUserProfile(request):
     user = request.user
+
     return Response({
         'id': user.id,
         'name': user.first_name,
@@ -78,78 +108,74 @@ def getUserProfile(request):
     })
 
 
-# -------------------------------
-# Get all users (admin only)
-# -------------------------------
+# ================================
+# GET ALL USERS (ADMIN)
+# ================================
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def getUsers(request):
     users = User.objects.all()
-    user_data = []
 
-    for user in users:
-        user_data.append({
+    data = [
+        {
             'id': user.id,
             'name': user.first_name,
             'email': user.email,
             'isAdmin': user.is_staff,
-        })
+        }
+        for user in users
+    ]
 
-    return Response(user_data)
+    return Response(data)
 
 
-# -------------------------------
-# Delete user (admin only)
-# -------------------------------
+# ================================
+# DELETE USER (ADMIN)
+# ================================
 @api_view(['DELETE'])
 @permission_classes([IsAdminUser])
 def deleteUser(request, pk):
-    try:
-        user = User.objects.get(id=pk)
-        user.delete()
-        return Response({'detail': 'User deleted'})
-    except User.DoesNotExist:
-        return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    user = get_object_or_404(User, id=pk)
+    user.delete()
+    return Response({'detail': 'User deleted'})
 
 
-# -------------------------------
-# Get user by ID (admin only)
-# -------------------------------
+# ================================
+# GET USER BY ID (ADMIN)
+# ================================
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def getUserById(request, pk):
-    try:
-        user = User.objects.get(id=pk)
-        return Response({
-            'id': user.id,
-            'name': user.first_name,
-            'email': user.email,
-            'isAdmin': user.is_staff,
-        })
-    except User.DoesNotExist:
-        return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    user = get_object_or_404(User, id=pk)
+
+    return Response({
+        'id': user.id,
+        'name': user.first_name,
+        'email': user.email,
+        'isAdmin': user.is_staff,
+    })
 
 
-# -------------------------------
-# Update user (admin only)
-# -------------------------------
+# ================================
+# UPDATE USER (ADMIN)
+# ================================
 @api_view(['PUT'])
 @permission_classes([IsAdminUser])
 def updateUser(request, pk):
-    data = request.data
-    try:
-        user = User.objects.get(id=pk)
-        user.first_name = data.get('name', user.first_name)
-        user.email = data.get('email', user.email)
-        user.username = data.get('email', user.username)
-        user.is_staff = data.get('isAdmin', user.is_staff)
-        user.save()
+    user = get_object_or_404(User, id=pk)
 
-        return Response({
-            'id': user.id,
-            'name': user.first_name,
-            'email': user.email,
-            'isAdmin': user.is_staff,
-        })
-    except User.DoesNotExist:
-        return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    data = request.data
+
+    user.first_name = data.get('name', user.first_name)
+    user.email = data.get('email', user.email)
+    user.username = data.get('email', user.username)
+    user.is_staff = data.get('isAdmin', user.is_staff)
+
+    user.save()
+
+    return Response({
+        'id': user.id,
+        'name': user.first_name,
+        'email': user.email,
+        'isAdmin': user.is_staff,
+    })

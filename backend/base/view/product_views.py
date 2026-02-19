@@ -1,34 +1,43 @@
+from decimal import Decimal, ROUND_HALF_UP
+from django.shortcuts import get_object_or_404
+from django.db import transaction
+from django.core.paginator import Paginator, EmptyPage
+from django.db.models import Q
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
-from django.core.paginator import Paginator, EmptyPage
-from django.db.models import Q
 
 from base.models import Product, Review
 from base.serializers import ProductSerializer
 
 
 # ============================
-# Get all products (with search & pagination)
+# Get all products (search + pagination)
 # ============================
 @api_view(['GET'])
 def getProducts(request):
-    query = request.query_params.get('keyword') or ''
+    query = request.query_params.get('keyword', '').strip()
+    page = int(request.query_params.get('page', 1))
+
     products = Product.objects.filter(
-        Q(name__icontains=query) | Q(description__icontains=query)
+        Q(name__icontains=query) |
+        Q(description__icontains=query)
     )
 
-    # Pagination (8 products per page)
-    page = int(request.query_params.get('page') or 1)
     paginator = Paginator(products, 8)
 
     try:
         products_page = paginator.page(page)
     except EmptyPage:
-        products_page = paginator.page(paginator.num_pages)
+        if paginator.num_pages > 0:
+            products_page = paginator.page(paginator.num_pages)
+        else:
+            products_page = []
 
     serializer = ProductSerializer(products_page, many=True)
+
     return Response({
         'products': serializer.data,
         'page': page,
@@ -37,16 +46,12 @@ def getProducts(request):
 
 
 # ============================
-# Get single product by ID
+# Get single product
 # ============================
 @api_view(['GET'])
 def getProduct(request, pk):
-    try:
-        product = Product.objects.get(id=pk)
-    except Product.DoesNotExist:
-        return Response({'detail': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    serializer = ProductSerializer(product, many=False)
+    product = get_object_or_404(Product, id=pk)
+    serializer = ProductSerializer(product)
     return Response(serializer.data)
 
 
@@ -55,106 +60,115 @@ def getProduct(request, pk):
 # ============================
 @api_view(['GET'])
 def getTopProducts(request):
-    products = Product.objects.all().order_by('-rating', '-numReviews')[:5]
+    products = Product.objects.order_by('-rating', '-numReviews')[:5]
     serializer = ProductSerializer(products, many=True)
     return Response(serializer.data)
 
 
 # ============================
-# Create a new product (Admin only)
+# Create product (Admin)
 # ============================
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def createProduct(request):
     user = request.user
+
     product = Product.objects.create(
         user=user,
         name='Sample Product',
-        price=0,
+        price=Decimal("0.00"),
         brand='',
         countInStock=0,
         category='',
         description=''
     )
-    serializer = ProductSerializer(product, many=False)
+
+    serializer = ProductSerializer(product)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 # ============================
-# Update a product (Admin only)
+# Update product (Admin)
 # ============================
 @api_view(['PUT'])
 @permission_classes([IsAdminUser])
 def updateProduct(request, pk):
-    try:
-        product = Product.objects.get(id=pk)
-    except Product.DoesNotExist:
-        return Response({'detail': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
-
+    product = get_object_or_404(Product, id=pk)
     data = request.data
+
     product.name = data.get('name', product.name)
-    product.price = data.get('price', product.price)
+    product.price = Decimal(str(data.get('price', product.price)))
     product.brand = data.get('brand', product.brand)
-    product.countInStock = data.get('countInStock', product.countInStock)
+    product.countInStock = int(data.get('countInStock', product.countInStock))
     product.category = data.get('category', product.category)
     product.description = data.get('description', product.description)
+
     product.save()
 
-    serializer = ProductSerializer(product, many=False)
+    serializer = ProductSerializer(product)
     return Response(serializer.data)
 
 
 # ============================
-# Delete a product (Admin only)
+# Delete product (Admin)
 # ============================
 @api_view(['DELETE'])
 @permission_classes([IsAdminUser])
 def deleteProduct(request, pk):
-    try:
-        product = Product.objects.get(id=pk)
-    except Product.DoesNotExist:
-        return Response({'detail': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
-
+    product = get_object_or_404(Product, id=pk)
     product.delete()
     return Response({'detail': 'Product deleted'})
 
 
 # ============================
-# Create product review (User only)
+# Create product review
 # ============================
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def createProductReview(request, pk):
     user = request.user
-    try:
-        product = Product.objects.get(id=pk)
-    except Product.DoesNotExist:
-        return Response({'detail': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+    product = get_object_or_404(Product, id=pk)
 
-    data = request.data
-    rating = int(data.get('rating', 0))
-    comment = data.get('comment', '').strip()
+    rating = int(request.data.get('rating', 0))
+    comment = request.data.get('comment', '').strip()
 
-    # Check if user already reviewed
     if product.reviews.filter(user=user).exists():
-        return Response({'detail': 'Product already reviewed'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'detail': 'Product already reviewed'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     if rating <= 0:
-        return Response({'detail': 'Please select a rating'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'detail': 'Please select a rating'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-    # Create review
-    review = Review.objects.create(
-        product=product,
-        user=user,
-        name=user.first_name or user.username,
-        rating=rating,
-        comment=comment
-    )
+    try:
+        with transaction.atomic():
+            Review.objects.create(
+                product=product,
+                user=user,
+                name=user.first_name or user.username,
+                rating=rating,
+                comment=comment
+            )
 
-    # Update product rating & review count
-    reviews = product.reviews.all()
-    product.numReviews = reviews.count()
-    product.rating = sum([rev.rating for rev in reviews]) / reviews.count()
-    product.save()
+            reviews = product.reviews.all()
+            product.numReviews = reviews.count()
 
-    return Response({'detail': 'Review added'})
+            avg_rating = sum([Decimal(r.rating) for r in reviews]) / Decimal(product.numReviews)
+            product.rating = avg_rating.quantize(
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP
+            )
+
+            product.save()
+
+        return Response({'detail': 'Review added'})
+
+    except Exception:
+        return Response(
+            {'detail': 'Failed to add review'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
