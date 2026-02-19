@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import Rating from './Rating'
 import { useDispatch } from 'react-redux'
 import { addToCart } from '../redux/actions/cartActions'
+import { IMAGE_BASE_URL } from '../constants'
 
 const Product = ({ product }) => {
   const dispatch = useDispatch()
@@ -14,12 +15,19 @@ const Product = ({ product }) => {
     navigate('/cart')
   }
 
+  // 🔥 IMAGE URL BUILDER (CORE FIX)
+  const imageUrl = product.image
+    ? product.image.startsWith('http')
+      ? product.image
+      : `${IMAGE_BASE_URL}${product.image}`
+    : 'https://via.placeholder.com/300x300?text=No+Image'
+
   return (
     <Card className="my-3 p-3 rounded">
       <Link to={`/product/${product.id}`}>
         <Card.Img
           variant="top"
-          src={`https://e-commerce-2-wajc.onrender.com${product.image}`}
+          src={imageUrl}
           onError={(e) => {
             e.target.onerror = null
             e.target.src = 'https://via.placeholder.com/300x300?text=No+Image'

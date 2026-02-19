@@ -1,18 +1,29 @@
-// src/redux/actions/orderActions.js
-import API from '../../axios' // use your axios instance (src/axios.js)
+import API from '../../axios'
 import {
   ORDER_CREATE_REQUEST,
   ORDER_CREATE_SUCCESS,
   ORDER_CREATE_FAIL,
+
   ORDER_DETAILS_REQUEST,
   ORDER_DETAILS_SUCCESS,
   ORDER_DETAILS_FAIL,
+
   ORDER_LIST_REQUEST,
   ORDER_LIST_SUCCESS,
   ORDER_LIST_FAIL,
+
+  ORDER_PAY_REQUEST,
+  ORDER_PAY_SUCCESS,
+  ORDER_PAY_FAIL,
+
+  ORDER_DELIVER_REQUEST,
+  ORDER_DELIVER_SUCCESS,
+  ORDER_DELIVER_FAIL,
 } from '../constants/orderConstants'
 
-// Create Order
+// =======================
+// CREATE ORDER
+// =======================
 export const createOrder = (order) => async (dispatch, getState) => {
   try {
     dispatch({ type: ORDER_CREATE_REQUEST })
@@ -21,23 +32,17 @@ export const createOrder = (order) => async (dispatch, getState) => {
       userLogin: { userInfo },
     } = getState()
 
-    if (!userInfo) {
-      throw new Error('Not authenticated — please login before placing an order.')
+    if (!userInfo || !userInfo.access) {
+      throw new Error('Not authenticated')
     }
-
-    // pick token from multiple possible keys (robust)
-    const token = userInfo?.access || userInfo?.token || userInfo?.authToken
-    console.log('DEBUG createOrder userInfo present:', !!userInfo, 'token present:', !!token)
 
     const config = {
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Authorization: `Bearer ${userInfo.access}`,
       },
     }
 
-    // API.defaults.baseURL handles base; call relative path
-    console.log('DEBUG POST to', (API.defaults.baseURL || '') + 'orders/add/', 'payload=', order)
     const { data } = await API.post('orders/add/', order, config)
 
     dispatch({
@@ -45,18 +50,17 @@ export const createOrder = (order) => async (dispatch, getState) => {
       payload: data,
     })
   } catch (error) {
-    console.error('DEBUG createOrder error:', error.response?.data || error.message)
     dispatch({
       type: ORDER_CREATE_FAIL,
       payload:
-        error.response && error.response.data.detail
-          ? error.response.data.detail
-          : error.message,
+        error.response?.data?.detail || error.message,
     })
   }
 }
 
-// Get Order Details
+// =======================
+// GET ORDER DETAILS
+// =======================
 export const getOrderDetails = (id) => async (dispatch, getState) => {
   try {
     dispatch({ type: ORDER_DETAILS_REQUEST })
@@ -65,14 +69,13 @@ export const getOrderDetails = (id) => async (dispatch, getState) => {
       userLogin: { userInfo },
     } = getState()
 
-    if (!userInfo) {
+    if (!userInfo || !userInfo.access) {
       throw new Error('Not authenticated')
     }
 
-    const token = userInfo?.access || userInfo?.token || userInfo?.authToken
     const config = {
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Authorization: `Bearer ${userInfo.access}`,
       },
     }
 
@@ -83,18 +86,17 @@ export const getOrderDetails = (id) => async (dispatch, getState) => {
       payload: data,
     })
   } catch (error) {
-    console.error('DEBUG getOrderDetails error:', error.response?.data || error.message)
     dispatch({
       type: ORDER_DETAILS_FAIL,
       payload:
-        error.response && error.response.data.detail
-          ? error.response.data.detail
-          : error.message,
+        error.response?.data?.detail || error.message,
     })
   }
 }
 
-// Admin: Get all Orders
+// =======================
+// LIST ORDERS (ADMIN)
+// =======================
 export const listOrders = () => async (dispatch, getState) => {
   try {
     dispatch({ type: ORDER_LIST_REQUEST })
@@ -103,14 +105,13 @@ export const listOrders = () => async (dispatch, getState) => {
       userLogin: { userInfo },
     } = getState()
 
-    if (!userInfo) {
+    if (!userInfo || !userInfo.access) {
       throw new Error('Not authenticated')
     }
 
-    const token = userInfo?.access || userInfo?.token || userInfo?.authToken
     const config = {
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Authorization: `Bearer ${userInfo.access}`,
       },
     }
 
@@ -121,13 +122,76 @@ export const listOrders = () => async (dispatch, getState) => {
       payload: data,
     })
   } catch (error) {
-    console.error('DEBUG listOrders error:', error.response?.data || error.message)
     dispatch({
       type: ORDER_LIST_FAIL,
       payload:
-        error.response && error.response.data.detail
-          ? error.response.data.detail
-          : error.message,
+        error.response?.data?.detail || error.message,
+    })
+  }
+}
+
+// =======================
+// MARK ORDER AS PAID
+// =======================
+export const payOrder = (orderId) => async (dispatch, getState) => {
+  try {
+    dispatch({ type: ORDER_PAY_REQUEST })
+
+    const {
+      userLogin: { userInfo },
+    } = getState()
+
+    if (!userInfo || !userInfo.access) {
+      throw new Error('Not authenticated')
+    }
+
+    const config = {
+      headers: {
+        Authorization: `Bearer ${userInfo.access}`,
+      },
+    }
+
+    await API.put(`orders/${orderId}/pay/`, {}, config)
+
+    dispatch({ type: ORDER_PAY_SUCCESS })
+  } catch (error) {
+    dispatch({
+      type: ORDER_PAY_FAIL,
+      payload:
+        error.response?.data?.detail || error.message,
+    })
+  }
+}
+
+// =======================
+// MARK ORDER AS DELIVERED (ADMIN)
+// =======================
+export const deliverOrder = (orderId) => async (dispatch, getState) => {
+  try {
+    dispatch({ type: ORDER_DELIVER_REQUEST })
+
+    const {
+      userLogin: { userInfo },
+    } = getState()
+
+    if (!userInfo || !userInfo.access) {
+      throw new Error('Not authenticated')
+    }
+
+    const config = {
+      headers: {
+        Authorization: `Bearer ${userInfo.access}`,
+      },
+    }
+
+    await API.put(`orders/${orderId}/deliver/`, {}, config)
+
+    dispatch({ type: ORDER_DELIVER_SUCCESS })
+  } catch (error) {
+    dispatch({
+      type: ORDER_DELIVER_FAIL,
+      payload:
+        error.response?.data?.detail || error.message,
     })
   }
 }

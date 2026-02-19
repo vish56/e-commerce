@@ -7,6 +7,7 @@ import Rating from '../components/Rating'
 import Loader from '../components/Loader'
 import Message from '../components/Message'
 import { listProductDetails } from '../redux/actions/productActions'
+import { IMAGE_BASE_URL } from '../constants'
 
 const ProductScreen = () => {
   const { id } = useParams()
@@ -26,6 +27,13 @@ const ProductScreen = () => {
     navigate(`/cart/${id}?qty=${qty}`)
   }
 
+  // 🔥 IMAGE URL NORMALIZATION (CORE FIX)
+  const imageUrl = product?.image
+    ? product.image.startsWith('http')
+      ? product.image
+      : `${IMAGE_BASE_URL}${product.image}`
+    : '/images/placeholder.png'
+
   return (
     <>
       {loading ? (
@@ -37,12 +45,17 @@ const ProductScreen = () => {
           <Helmet>
             <title>{product.name}</title>
           </Helmet>
+
           <Row>
             <Col md={6}>
               <Image
-                src={product.image || '/images/placeholder.png'}
+                src={imageUrl}
                 alt={product.name}
                 fluid
+                onError={(e) => {
+                  e.target.onerror = null
+                  e.target.src = '/images/placeholder.png'
+                }}
               />
             </Col>
 
@@ -59,7 +72,9 @@ const ProductScreen = () => {
                   />
                 </ListGroup.Item>
 
-                <ListGroup.Item>Price: ₹{product.price}</ListGroup.Item>
+                <ListGroup.Item>
+                  Price: ₹{product.price}
+                </ListGroup.Item>
 
                 <ListGroup.Item>
                   Description: {product.description}
@@ -96,7 +111,9 @@ const ProductScreen = () => {
                           <Form.Control
                             as='select'
                             value={qty}
-                            onChange={(e) => setQty(Number(e.target.value))}
+                            onChange={(e) =>
+                              setQty(Number(e.target.value))
+                            }
                           >
                             {[...Array(product.countInStock).keys()].map(
                               (x) => (

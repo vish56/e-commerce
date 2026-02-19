@@ -1,4 +1,3 @@
-// src/screens/AdminOrderScreen.js
 import React, { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Table, Button } from 'react-bootstrap'
@@ -12,7 +11,7 @@ const AdminOrderScreen = () => {
   const navigate = useNavigate()
 
   const orderList = useSelector((state) => state.orderList)
-  const { loading, error, orders } = orderList
+  const { loading, error, orders = [] } = orderList
 
   const userLogin = useSelector((state) => state.userLogin)
   const { userInfo } = userLogin
@@ -27,7 +26,8 @@ const AdminOrderScreen = () => {
 
   return (
     <>
-      <h1>Orders</h1>
+      <h1>All Orders (Admin)</h1>
+
       {loading ? (
         <Loader />
       ) : error ? (
@@ -45,29 +45,55 @@ const AdminOrderScreen = () => {
               <th></th>
             </tr>
           </thead>
+
           <tbody>
             {orders.map((order) => (
-              <tr key={order._id}>
-                <td>{order._id}</td>
-                <td>{order.user && order.user.name}</td>
-                <td>{order.createdAt.substring(0, 10)}</td>
+              <tr key={order.id}>
+                <td>{order.id}</td>
+
+                {/* ✅ FIXED USER COLUMN */}
+                <td>
+                  {order.user ? (
+                    <>
+                      {order.user.name}
+                      <br />
+                      <small>{order.user.email}</small>
+                    </>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+
+                <td>
+                  {order.createdAt
+                    ? order.createdAt.substring(0, 10)
+                    : '—'}
+                </td>
+
                 <td>₹{order.totalPrice}</td>
+
                 <td>
                   {order.isPaid ? (
-                    order.paidAt.substring(0, 10)
+                    order.paidAt
+                      ? order.paidAt.substring(0, 10)
+                      : 'Yes'
                   ) : (
-                    <i className="fas fa-times" style={{ color: 'red' }}></i>
+                    <i className="fas fa-times" style={{ color: 'red' }} />
                   )}
                 </td>
+
                 <td>
                   {order.isDelivered ? (
-                    order.deliveredAt.substring(0, 10)
+                    order.deliveredAt
+                      ? order.deliveredAt.substring(0, 10)
+                      : 'Yes'
                   ) : (
-                    <i className="fas fa-times" style={{ color: 'red' }}></i>
+                    <i className="fas fa-times" style={{ color: 'red' }} />
                   )}
                 </td>
+
                 <td>
-                  <Link to={`/order/${order._id}`}>
+                  <Link to={`/order/${order.id}`}>
                     <Button variant="light" className="btn-sm">
                       Details
                     </Button>

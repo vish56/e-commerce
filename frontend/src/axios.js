@@ -1,30 +1,22 @@
-// frontend/src/axios.js
 import axios from 'axios'
 
 const API = axios.create({
-  baseURL: 'https://e-commerce-2-wajc.onrender.com/api/',
- // important: trailing slash
+  baseURL: 'http://127.0.0.1:8000/api/',
 })
 
-API.interceptors.request.use((config) => {
-  try {
-    const raw = localStorage.getItem('userInfo')
-    const userInfo = raw ? JSON.parse(raw) : null
+API.interceptors.request.use(
+  (config) => {
+    const userInfo = localStorage.getItem('userInfo')
+      ? JSON.parse(localStorage.getItem('userInfo'))
+      : null
 
-    // use access first (SimpleJWT)
-    const token = userInfo?.access || userInfo?.token || userInfo?.authToken
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+    if (userInfo && userInfo.access) {
+      config.headers.Authorization = `Bearer ${userInfo.access}`
     }
 
-    if (!config.headers['Content-Type']) {
-      config.headers['Content-Type'] = 'application/json'
-    }
-  } catch (err) {
-    // ignore bad localStorage
-  }
-  return config
-}, (error) => Promise.reject(error))
+    return config
+  },
+  (error) => Promise.reject(error)
+)
 
 export default API
