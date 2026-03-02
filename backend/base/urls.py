@@ -1,3 +1,4 @@
+from django import views
 from django.urls import path, include
 from base.view import product_views as product_views
 
@@ -8,4 +9,5 @@ urlpatterns = [
 
     # User Routes from separate file
     path('users/', include('base.url.user_urls')),
+    path('admin/dashboard/', views.getAdminDashboard, name='admin-dashboard'),
 ]

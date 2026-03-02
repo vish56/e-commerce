@@ -155,3 +155,107 @@ Use try/except around int conversion to avoid 500.
 
 Production systems must guard all external input.
 """
+"""
+ARCHITECTURE INSIGHT – Clean State Discipline
+
+Today reinforced a core engineering principle:
+
+Never build new features on unstable state.
+
+Before search integration:
+- All structural deletions were committed
+- All Redux updates synchronized
+- Repo verified clean
+
+This ensures:
+- Safe rollback
+- Clear diff tracking
+- Reliable deployment pipeline
+
+Professional development requires
+controlled commit checkpoints.
+"""
+# SYSTEM ARCHITECTURE
+
+## Overview
+
+Frontend (React + Redux)
+        ↓
+Axios API Calls
+        ↓
+Django REST Framework (Custom JWT)
+        ↓
+Database (PostgreSQL - Production)
+
+---
+
+## STATE MANAGEMENT
+
+Redux manages:
+
+userLogin
+cart
+products
+orders
+admin state
+
+Cart is persisted via localStorage.
+
+On every cart update:
+Redux → localStorage sync
+
+On app load:
+localStorage → initial Redux state hydration
+
+---
+
+## AUTHENTICATION FLOW
+
+1. User logs in
+2. Backend returns JWT + user info
+3. Frontend stores userInfo in localStorage
+4. Axios attaches token to headers
+5. Protected routes validated
+
+Logout:
+- Clears userInfo
+- Clears cart
+- Resets Redux slices
+
+---
+
+## CART DESIGN
+
+Guest cart supported.
+
+Cart stored in:
+localStorage
+
+Why:
+Industry standard UX (Amazon-style)
+
+Cart operations:
+- CART_ADD_ITEM
+- CART_REMOVE_ITEM
+- CART_CLEAR_ITEMS
+- CART_RESET
+
+---
+
+## ORDER SAFETY
+
+Stock deduction uses:
+
+transaction.atomic
+select_for_update
+
+Prevents race conditions during simultaneous purchases.
+
+---
+
+## SECURITY NOTES
+
+- JWT-based stateless auth
+- Admin route protection
+- Stock consistency validation
+- Local state reset on logout

@@ -1,7 +1,10 @@
 // src/App.js
+
 import React from 'react'
 import { Container } from 'react-bootstrap'
 import { Routes, Route } from 'react-router-dom'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -18,11 +21,13 @@ import PlaceOrderScreen from './Screen/PlaceOrderScreen'
 import AdminOrderScreen from './Screen/AdminOrderScreen'
 import ProductListScreen from './Screen/ProductListScreen'
 import OrderScreen from './Screen/OrderScreen'
+import AdminDashboardScreen from './Screen/AdminDashboardScreen'
 
 function App() {
   return (
     <>
       <Header />
+
       <main className='py-3'>
         <Container>
           <Routes>
@@ -36,16 +41,18 @@ function App() {
             <Route path="/shipping" element={<ShippingScreen />} />
             <Route path="/payment" element={<PaymentScreen />} />
             <Route path="/placeorder" element={<PlaceOrderScreen />} />
-            <Route path='/admin/orderlist' element={<AdminOrderScreen />} />
-            <Route path='/admin/productlist' element={<ProductListScreen />} />
             <Route path="/order/:id" element={<OrderScreen />} />
 
-
             {/* Admin Routes */}
+            <Route path="/admin/dashboard" element={<AdminDashboardScreen />} />
             <Route path="/admin/orderlist" element={<AdminOrderScreen />} />
+            <Route path="/admin/productlist" element={<ProductListScreen />} />
           </Routes>
         </Container>
       </main>
+
+      <ToastContainer position="top-right" autoClose={2000} />
+
       <Footer />
     </>
   )

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card } from 'react-bootstrap'
+import { Card, Badge } from 'react-bootstrap'
 import { Link, useNavigate } from 'react-router-dom'
 import Rating from './Rating'
 import { useDispatch } from 'react-redux'
@@ -15,7 +15,7 @@ const Product = ({ product }) => {
     navigate('/cart')
   }
 
-  // 🔥 IMAGE URL BUILDER (CORE FIX)
+  // IMAGE URL BUILDER
   const imageUrl = product.image
     ? product.image.startsWith('http')
       ? product.image
@@ -23,7 +23,7 @@ const Product = ({ product }) => {
     : 'https://via.placeholder.com/300x300?text=No+Image'
 
   return (
-    <Card className="my-3 p-3 rounded">
+    <Card className="my-3 p-3 rounded shadow-sm">
       <Link to={`/product/${product.id}`}>
         <Card.Img
           variant="top"
@@ -36,7 +36,7 @@ const Product = ({ product }) => {
       </Link>
 
       <Card.Body>
-        <Link to={`/product/${product.id}`}>
+        <Link to={`/product/${product.id}`} style={{ textDecoration: 'none' }}>
           <Card.Title as="div">
             <strong>{product.name}</strong>
           </Card.Title>
@@ -51,11 +51,27 @@ const Product = ({ product }) => {
 
         <Card.Text as="h3">₹{product.price}</Card.Text>
 
+        {/* ===================== */}
+        {/* Stock Badge */}
+        {/* ===================== */}
+        <div className="mb-2">
+          {product.countInStock === 0 ? (
+            <Badge bg="danger">Out of Stock</Badge>
+          ) : product.countInStock <= 5 ? (
+            <Badge bg="warning" text="dark">
+              Only {product.countInStock} left!
+            </Badge>
+          ) : (
+            <Badge bg="success">In Stock</Badge>
+          )}
+        </div>
+
         <button
           className="btn btn-primary btn-sm mt-2"
           onClick={addToCartHandler}
+          disabled={product.countInStock === 0}
         >
-          Add to Cart
+          {product.countInStock === 0 ? 'Out of Stock' : 'Add to Cart'}
         </button>
       </Card.Body>
     </Card>

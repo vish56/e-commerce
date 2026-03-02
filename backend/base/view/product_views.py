@@ -12,20 +12,42 @@ from rest_framework import status
 from base.models import Product, Review
 from base.serializers import ProductSerializer
 
+from django.contrib.auth.models import User
+from django.db.models import Sum
+from base.models import Order
+
 
 # ============================
-# Get all products (search + pagination)
+# Get all products (search + sorting + pagination)
 # ============================
 @api_view(['GET'])
 def getProducts(request):
     query = request.query_params.get('keyword', '').strip()
     page = int(request.query_params.get('page', 1))
+    sort = request.query_params.get('sort', '')
 
     products = Product.objects.filter(
         Q(name__icontains=query) |
         Q(description__icontains=query)
     )
 
+    # ============================
+    # Sorting (Whitelisted)
+    # ============================
+    if sort == 'price_asc':
+        products = products.order_by('price')
+    elif sort == 'price_desc':
+        products = products.order_by('-price')
+    elif sort == 'newest':
+        products = products.order_by('-createdAt')
+    elif sort == 'rating':
+        products = products.order_by('-rating', '-numReviews')
+    else:
+        products = products.order_by('-createdAt')  # default ordering
+
+    # ============================
+    # Pagination
+    # ============================
     paginator = Paginator(products, 8)
 
     try:
@@ -172,3 +194,32 @@ def createProductReview(request, pk):
             {'detail': 'Failed to add review'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+    
+    # ============================
+# Admin Dashboard Metrics
+# ============================
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def getAdminDashboard(request):
+
+    total_products = Product.objects.count()
+    total_orders = Order.objects.count()
+    total_users = User.objects.count()
+
+    revenue_data = Order.objects.filter(isPaid=True).aggregate(
+        total_revenue=Sum('totalPrice')
+    )
+
+    total_revenue = revenue_data['total_revenue'] or 0
+
+    pending_orders = Order.objects.filter(isDelivered=False).count()
+    low_stock_products = Product.objects.filter(countInStock__lte=5).count()
+
+    return Response({
+        'totalProducts': total_products,
+        'totalOrders': total_orders,
+        'totalUsers': total_users,
+        'totalRevenue': str(total_revenue),
+        'pendingOrders': pending_orders,
+        'lowStockProducts': low_stock_products,
+    })

@@ -154,3 +154,77 @@ LESSON:
 Most production bugs are integration bugs,
 not logic bugs.
 """
+"""
+GIT STRUCTURE ISSUE
+
+Problem:
+git add . from backend folder did not stage frontend changes.
+
+Cause:
+Working inside subdirectory, not repository root.
+
+Fix:
+Moved to root directory and staged properly.
+
+Lesson:
+Always confirm repository root before major commit.
+"""
+# BUGS LOG
+
+---
+
+## 🐛 Cart Persisted After Logout
+
+Issue:
+Cart items remained visible after logout.
+
+Cause:
+localStorage was not cleared fully.
+Redux state reset without storage sync.
+
+Fix:
+- Introduced CART_RESET
+- Cleared cartItems, shippingAddress, paymentMethod
+- Synced Redux + localStorage
+
+Status: Resolved
+
+---
+
+## 🐛 Remove Button Invisible
+
+Issue:
+Trash icon not visible in cart.
+
+Cause:
+Font Awesome CDN not loaded.
+
+Fix:
+- Replaced with react-icons
+- Installed react-icons package
+
+Status: Resolved
+
+---
+
+## 🐛 Redux State Mismatch
+
+Issue:
+State and localStorage out of sync.
+
+Fix:
+Ensured all cart actions update localStorage.
+
+Status: Resolved
+
+---
+
+## 🐛 Peer Dependency Conflict (react-icons install)
+
+Issue:
+ERESOLVE conflict between redux versions.
+
+Fix:
+Installed with --legacy-peer-deps.
+
+Status: Resolved

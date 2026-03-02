@@ -21,19 +21,16 @@ import {
 } from '../constants/productConstants'
 
 // =======================
-// LIST PRODUCTS
-// =======================
-// =======================
-// LIST PRODUCTS
+// LIST PRODUCTS (WITH SORT)
 // =======================
 export const listProducts =
-  (keyword = '', pageNumber = 1) =>
+  (keyword = '', pageNumber = 1, sort = '') =>
   async (dispatch) => {
     try {
       dispatch({ type: PRODUCT_LIST_REQUEST })
 
       const { data } = await axios.get(
-        `/api/products/?keyword=${keyword}&page=${pageNumber}`
+        `/api/products/?keyword=${keyword}&page=${pageNumber}&sort=${sort}`
       )
 
       dispatch({
@@ -50,7 +47,6 @@ export const listProducts =
       })
     }
   }
-
 
 // =======================
 // PRODUCT DETAILS
