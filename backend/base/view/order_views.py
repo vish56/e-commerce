@@ -52,6 +52,7 @@ def safe_image_url(product):
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
+
 def addOrderItems(request):
     user = request.user
     data = request.data
@@ -66,12 +67,14 @@ def addOrderItems(request):
     try:
         with transaction.atomic():
 
+            calculated_items_price = Decimal("0.00")
+
             order = Order.objects.create(
                 user=user,
                 paymentMethod=data.get("paymentMethod", "COD"),
                 taxPrice=money(data.get("taxPrice")),
                 shippingPrice=money(data.get("shippingPrice")),
-                totalPrice=money(data.get("totalPrice")),
+                totalPrice=Decimal("0.00"),  # temp
             )
 
             shipping = data.get("shippingAddress", {})
@@ -103,17 +106,31 @@ def addOrderItems(request):
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
+                # ✅ ALWAYS use DB price
+                price = product.price
+
                 OrderItem.objects.create(
                     order=order,
                     product=product,
                     name=product.name,
                     qty=qty,
-                    price=money(item.get("price", product.price)),
+                    price=price,
                     image=safe_image_url(product),
                 )
 
+                calculated_items_price += price * qty
+
                 product.countInStock -= qty
                 product.save()
+
+            # ✅ FINAL TOTAL
+            tax = money(data.get("taxPrice"))
+            shipping_price = money(data.get("shippingPrice"))
+
+            final_total = calculated_items_price + tax + shipping_price
+
+            order.totalPrice = final_total
+            order.save()
 
         serializer = OrderSerializer(order)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -128,6 +145,7 @@ def addOrderItems(request):
             {"detail": "Unexpected server error"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+        
 
 
 # =========================

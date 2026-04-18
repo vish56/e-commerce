@@ -13,32 +13,41 @@ const HomeScreen = () => {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Query Params
   const searchParams = new URLSearchParams(location.search)
+
   const keyword = searchParams.get('keyword') || ''
-  const pageNumber = searchParams.get('page') || 1
+  const pageNumber = Number(searchParams.get('page')) || 1
   const sort = searchParams.get('sort') || ''
 
-  // Redux State
-  const productList = useSelector((state) => state.productList)
-  const { loading, error, products = [], pages } = productList
+  const { loading, error, products = [], pages } = useSelector(
+    (state) => state.productList
+  )
 
-  const productTopRated = useSelector((state) => state.productTopRated)
   const {
     loading: loadingTop,
     error: errorTop,
     products: topProducts = [],
-  } = productTopRated
+  } = useSelector((state) => state.productTopRated)
 
+  // Debounced product fetch
   useEffect(() => {
-    dispatch(listProducts(keyword, pageNumber, sort))
-    dispatch(listTopProducts())
+    const delay = setTimeout(() => {
+      dispatch(listProducts(keyword, pageNumber, sort))
+    }, 300)
+
+    return () => clearTimeout(delay)
   }, [dispatch, keyword, pageNumber, sort])
+
+  // Top products only when no search
+  useEffect(() => {
+    if (!keyword) {
+      dispatch(listTopProducts())
+    }
+  }, [dispatch, keyword])
 
   return (
     <div className="container">
 
-      {/* Top Carousel */}
       {!keyword && (
         loadingTop ? (
           <Loader />
@@ -55,11 +64,6 @@ const HomeScreen = () => {
                     className="d-block w-100"
                     style={{ height: '400px', objectFit: 'cover' }}
                   />
-                  <Carousel.Caption className="bg-dark bg-opacity-75 rounded">
-                    <h4>
-                      {product.name} (₹{product.price})
-                    </h4>
-                  </Carousel.Caption>
                 </Link>
               </Carousel.Item>
             ))}
@@ -67,20 +71,18 @@ const HomeScreen = () => {
         )
       )}
 
-      {/* Heading */}
       <h1 className="my-4">
-        {keyword ? `Search Results for "${keyword}"` : 'Latest Products'}
+        {keyword ? `Search: ${keyword}` : 'Latest Products'}
       </h1>
 
-      {/* Sort Dropdown */}
       <div className="d-flex justify-content-end mb-3">
         <select
           className="form-select w-auto"
           value={sort}
           onChange={(e) => {
             const newSort = e.target.value
-
             let query = `?page=1`
+
             if (keyword) query += `&keyword=${keyword}`
             if (newSort) query += `&sort=${newSort}`
 
@@ -88,14 +90,13 @@ const HomeScreen = () => {
           }}
         >
           <option value="">Default</option>
-          <option value="price_asc">Price: Low to High</option>
-          <option value="price_desc">Price: High to Low</option>
+          <option value="price_asc">Price ↑</option>
+          <option value="price_desc">Price ↓</option>
           <option value="newest">Newest</option>
           <option value="rating">Top Rated</option>
         </select>
       </div>
 
-      {/* Product Grid */}
       {loading ? (
         <Loader />
       ) : error ? (
@@ -107,14 +108,7 @@ const HomeScreen = () => {
               <h2>No Products Found</h2>
             ) : (
               products.map((product) => (
-                <Col
-                  key={product.id}
-                  sm={12}
-                  md={6}
-                  lg={4}
-                  xl={3}
-                  className="mb-4"
-                >
+                <Col key={product.id} sm={12} md={6} lg={4} xl={3}>
                   <Product product={product} />
                 </Col>
               ))
@@ -124,7 +118,6 @@ const HomeScreen = () => {
           <Paginate pages={pages} page={pageNumber} />
         </>
       )}
-
     </div>
   )
 }
